@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "gantty"
+version = "0.1.0"
+description = "Command-line tool for creating and managing Gantt charts."
+authors = ["Isaac Riley <isaac.r.riley@gmail.com>"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

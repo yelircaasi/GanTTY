@@ -1,14 +1,16 @@
-import os
-import sys
-import tty
-import termios
 import datetime
-import signal
-import traceback
+import os
 import pickle
-from ui import *
+import signal
+import sys
+import termios
+import traceback
+import tty
+
 from gantt import *
 from keys import *
+from ui import *
+
 
 def draw(view):
 
@@ -24,6 +26,7 @@ def draw(view):
 
     # Flush
     sys.stdout.flush()
+
 
 def process(view, char):
 
@@ -74,7 +77,7 @@ def process(view, char):
     elif char == PAN_TOP:
         view.firstTask = 0
     elif char == PAN_BOTTOM:
-        view.firstTask = len(view.project.tasks) - ((view.height - 2)//2)
+        view.firstTask = len(view.project.tasks) - ((view.height - 2) // 2)
         if view.firstTask < 0:
             view.firstTask = 0
     elif char == PAN_START:
@@ -89,10 +92,10 @@ def process(view, char):
         view.addTask(fd, oldSettings)
 
     elif char == WRITE_TO_FILE:
-        with open(FILE_NAME, 'wb') as ganttFile:
+        with open(FILE_NAME, "wb") as ganttFile:
             pickle.dump(view, ganttFile)
         view.unsavedEdits = False
-        drawInfo(view, 'Project saved!')
+        drawInfo(view, "Project saved!")
         sys.stdout.flush()
         redraw = False
 
@@ -102,19 +105,21 @@ def process(view, char):
     if redraw:
         draw(view)
 
+
 def onResize(view):
     view.updateSize()
 
     # Fix scrolling
-    view.firstTask = min(view.firstTask, len(view.project.tasks) - ((view.height - TASK_Y_OFFSET + 1)//2))
+    view.firstTask = min(view.firstTask, len(view.project.tasks) - ((view.height - TASK_Y_OFFSET + 1) // 2))
     if view.firstTask < 0:
         view.firstTask = 0
 
     draw(view)
 
+
 # Get file name
 if len(sys.argv) < 2:
-    print('USAGE: gantt <filename>')
+    print("USAGE: gantt <filename>")
     exit()
 
 FILE_NAME = sys.argv[1]
@@ -124,29 +129,29 @@ fd = sys.stdin.fileno()
 oldSettings = termios.tcgetattr(fd)
 tty.setraw(sys.stdin)
 
-endMsg = ''
+endMsg = ""
 endClear = False
 
 try:
 
     try:
-        with open(FILE_NAME, 'rb') as ganttFile:
+        with open(FILE_NAME, "rb") as ganttFile:
             view = pickle.load(ganttFile)
         if type(view) is not View:
-            endMsg = 'Could not read file correctly!'
+            endMsg = "Could not read file correctly!"
             raise
         view.unsavedEdits = False
     except (FileNotFoundError, EOFError):
-        view = View(Project('Untitled'))
+        view = View(Project("Untitled"))
     except pickle.UnpicklingError:
-        endMsg = 'Could not read file correctly!'
+        endMsg = "Could not read file correctly!"
         raise
 
     # Redraw on resize
     signal.signal(signal.SIGWINCH, lambda signum, frame: onResize(view))
 
     # Hide the cursor
-    write('\x1b[?25l')
+    write("\x1b[?25l")
 
     # Draw the screen
     endClear = True
@@ -157,8 +162,10 @@ try:
         char = sys.stdin.read(1)
         if char == QUIT:
             if view.unsavedEdits:
-                confirm = getInputText(view, 'About to quit with unsaved edits! Are you sure you want to continue? ', fd, oldSettings)
-                if confirm.lower() == 'yes':
+                confirm = getInputText(
+                    view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, oldSettings
+                )
+                if confirm.lower() == "yes":
                     break
             else:
                 break
@@ -168,13 +175,13 @@ try:
 except Exception:
     tb = traceback.format_exc()
 else:
-    tb = ''
+    tb = ""
 
 # Restore terminal settings
 reset()
 if endClear:
     clear()
-write('\x1b[?25h\n\r')
+write("\x1b[?25h\n\r")
 termios.tcsetattr(fd, termios.TCSADRAIN, oldSettings)
 if endMsg:
     print(endMsg)

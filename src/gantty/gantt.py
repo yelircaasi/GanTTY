@@ -4,7 +4,8 @@ DONE = 0
 ONGOING = 1
 WAITING = 2
 CRITICAL = 3
-#REMOVED = 4
+# REMOVED = 4
+
 
 class Project:
     def __init__(self, name):
@@ -12,10 +13,7 @@ class Project:
         self.tasks = []
         self.startDate = datetime.date.today()
 
-    def addTask(self, title,
-                length = 1,
-                earliestStart = 0,
-                isDone = False):
+    def addTask(self, title, length=1, earliestStart=0, isDone=False):
         self.tasks.append(Task(title, self, length, earliestStart, isDone))
 
     def removeTask(self, toDelete):
@@ -31,18 +29,16 @@ class Project:
     def end(self):
         return max(task.end for task in self.tasks)
 
+
 class Task:
-    def __init__(self, title, project,
-                 length = 1,
-                 earliestStart = 0,
-                 isDone = False):
+    def __init__(self, title, project, length=1, earliestStart=0, isDone=False):
 
         # Basic attributes
         self.title = title
         self.isDone = isDone
         self.length = length
         self.earliestStart = earliestStart
-        self.description = ''
+        self.description = ""
 
         self.deps = []
         self.project = project
@@ -137,4 +133,3 @@ class Task:
         self.isDone = False
         for dependent in self.dependents:
             dependent.isDone = False
-
