@@ -1,0 +1,18 @@
+{
+    "folders": [
+        {
+            "path": ".."
+        }
+    ],
+    "launch": {
+        "compounds": [],
+        "configurations": [],
+        "version": "0.2.0",
+    },
+    "settings": {
+        "python.formatting.provider": "black",
+        //"terminal.integrated.env.linux": {
+        //    "ZSH_INIT_COMMAND": "poetry shell"
+        //},
+    },
+}
