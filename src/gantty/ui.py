@@ -6,7 +6,7 @@ import tempfile
 import termios
 import tty
 
-from gantt import Project, Status, Task
+from gantty.gantt import Project, Status, Task
 
 
 # Colors

@@ -7,9 +7,9 @@ import termios
 import traceback
 import tty
 
-from gantt import Project, Status, Task
-from keys import Keybindings
-from ui import (
+from gantty.gantt import Project, Status, Task
+from gantty.keys import Keybindings
+from gantty.ui import (
     Color,
     Constants,
     View,
@@ -162,12 +162,14 @@ def main():
         try:
             with open(FILE_NAME, "rb") as ganttFile:
                 view = pickle.load(ganttFile)
-            if type(view) is not View:
+                print(view)
+            if not isinstance(view, View):
                 endMsg = "Could not read file correctly!"
                 raise
             view.unsavedEdits = False
         except (FileNotFoundError, EOFError):
-            view = View(Project("Untitled"))
+            # proj_name = input("Please enter project name: ")
+            view = View(Project("New Project"))
         except pickle.UnpicklingError:
             endMsg = "Could not read file correctly!"
             raise
