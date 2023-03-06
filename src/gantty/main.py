@@ -4,6 +4,7 @@ import sys
 import termios
 import traceback
 import tty
+from dataclasses import dataclass
 
 from gantty.gantt import Project
 from gantty.keys import Keybindings
@@ -17,6 +18,23 @@ from gantty.ui import (
     reset,
     write,
 )
+
+
+def get_file_name():
+    if len(sys.argv) < 2:
+        print("USAGE: gantt <filename>")
+        exit()
+    file_name = sys.argv[1]
+    return file_name
+
+
+@dataclass
+class RuntimeInfo:
+    file_name: str = ""  # get_file_name()
+    file_descriptor: int = sys.stdin.fileno()
+    end_clear: bool = False
+    old_settings: tuple = tuple(termios.tcgetattr(sys.stdin.fileno()))
+    exception_traceback: str = ""
 
 
 def create_view(file_name):
@@ -34,66 +52,69 @@ def create_view(file_name):
     return view
 
 
-def main():
-    # Get file name
-    if len(sys.argv) < 2:
-        print("USAGE: gantt <filename>")
-        exit()
+def main_loop(info_obj):
 
-    FILE_NAME = sys.argv[1]
+    view = create_view(info_obj.file_name)
 
-    # Setup raw mode
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    tty.setraw(sys.stdin)
+    # Redraw on resize
+    signal.signal(signal.SIGWINCH, lambda signum, frame: on_resize(view))
 
-    end_msg = ""
-    end_clear = False
+    # Hide the cursor
+    write("\x1b[?25l")
 
-    try:
+    # Draw the screen
+    info_obj.end_clear = True
+    draw(view)
 
-        view = create_view(FILE_NAME)
-
-        # Redraw on resize
-        signal.signal(signal.SIGWINCH, lambda signum, frame: on_resize(view))
-
-        # Hide the cursor
-        write("\x1b[?25l")
-
-        # Draw the screen
-        end_clear = True
-        draw(view)
-
-        # Read input
-        while True:
-            char = sys.stdin.read(1)
-            if char == Keybindings.QUIT:
-                if view.unsaved_edits:
-                    confirm = get_input_text(
-                        view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, old_settings
-                    )
-                    if confirm.lower() == "yes":
-                        break
-                else:
+    # Read input
+    while True:
+        char = sys.stdin.read(1)
+        if char == Keybindings.QUIT:
+            if view.unsaved_edits:
+                confirm = get_input_text(
+                    view,
+                    "About to quit with unsaved edits! Are you sure you want to continue? ",
+                    info_obj.file_descriptor,
+                    list(info_obj.old_settings),
+                )
+                if confirm.lower() == "yes":
                     break
-            process(view, char, fd, old_settings, FILE_NAME)
+            else:
+                break
+        process(view, char, info_obj.file_descriptor, list(info_obj.old_settings), info_obj.file_name)
 
-    # Avoid breaking the terminal after a crash
-    except Exception:
-        tb = traceback.format_exc()
-    else:
-        tb = ""
+    return info_obj
 
-    # Restore terminal settings
+
+def restore_terminal(info_obj):
     reset()
-    if end_clear:
+    if info_obj.end_clear:
         clear()
     write("\x1b[?25h\n\r")
-    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    if end_msg:
-        print(end_msg)
-    else:
-        print(tb)
+    termios.tcsetattr(info_obj.file_descriptor, termios.TCSADRAIN, list(info_obj.old_settings))
+    print(info_obj.exception_traceback)
+
+
+def main():
+
+    runtime_info = RuntimeInfo(file_name=get_file_name())
+    # FILE_NAME = get_file_name()
+
+    # Setup raw mode
+    # file_descriptor = sys.stdin.fileno()
+    # old_settings = termios.tcgetattr(file_descriptor)
+    tty.setraw(sys.stdin)
+
+    try:
+        runtime_info = main_loop(runtime_info)
+
+    except Exception:
+        # Avoid breaking the terminal after a crash
+        runtime_info.exception_traceback = traceback.format_exc()
+    # else:
+    #     tb = ""
+
+    restore_terminal(runtime_info)
 
 
 if __name__ == "__main__":
