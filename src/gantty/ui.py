@@ -6,11 +6,11 @@ import tempfile
 import termios
 import tty
 
-from gantt import *
+from gantt import Project, Status, Task
 
 
-# Colours
-class colour:
+# Colors
+class Color:
     black = 0
     red = 1
     green = 2
@@ -30,52 +30,54 @@ class colour:
     brightWhite = 67
 
 
-DAY = 0
-WEEK = 1
+class Constants:
+    DAY = 0
+    WEEK = 1
 
-TASK_BG_COLOUR = colour.default
+    TASK_BG_COLOR = Color.default
 
-CURRENT_TASK_BG_COLOUR = colour.magenta
-CURRENT_TASK_FG_COLOUR = colour.brightWhite
+    CURRENT_TASK_BG_COLOR = Color.magenta
+    CURRENT_TASK_FG_COLOR = Color.brightWhite
 
-GRID_FG = colour.brightWhite
-GRID_COLOUR_A = colour.black
-GRID_COLOUR_B = colour.default
-TODAY_COLOUR = colour.cyan
-TODAY_FG_COLOUR = colour.black
+    GRID_FG = Color.brightWhite
+    GRID_COLOR_A = Color.black
+    GRID_COLOR_B = Color.default
+    TODAY_COLOR = Color.cyan
+    TODAY_FG_COLOR = Color.black
 
-# Default colours
-DEFAULT_COLOUR = colour.brightWhite
+    # Default Colors
+    DEFAULT_COLOR = Color.brightWhite
 
-# Normal view colours
-DONE_COLOUR = colour.brightGreen
-ONGOING_COLOUR = colour.brightBlue
-CRITICAL_COLOUR = colour.brightYellow
+    # Normal view Colors
+    DONE_COLOR = Color.brightGreen
+    ONGOING_COLOR = Color.brightBlue
+    CRITICAL_COLOR = Color.brightYellow
 
-# Dependency view colours
-DEPS_OF_COLOUR = colour.brightGreen
+    # Dependency view Colors
+    DEPS_OF_COLOR = Color.brightGreen
 
-DIRECT_DEPENDENCY_COLOUR = colour.brightRed
-DEPENDENCY_COLOUR = colour.brightYellow
+    DIRECT_DEPENDENCY_COLOR = Color.brightRed
+    DEPENDENCY_COLOR = Color.brightYellow
 
-DIRECT_DEPENDENT_COLOUR = colour.brightBlue
-DEPENDENT_COLOUR = colour.brightCyan
+    DIRECT_DEPENDENT_COLOR = Color.brightBlue
+    DEPENDENT_COLOR = Color.brightCyan
 
-# Other colours
-PROMPT_BG_COLOUR = colour.brightWhite
-PROMPT_FG_COLOUR = colour.black
+    # Other Colors
+    PROMPT_BG_COLOR = Color.brightWhite
+    PROMPT_FG_COLOR = Color.black
 
-INFO_BG_COLOUR = colour.yellow
-INFO_FG_COLOUR = colour.black
+    INFO_BG_COLOR = Color.yellow
+    INFO_FG_COLOR = Color.black
 
-DEFAULT_TASK_WIDTH = 32
-TASK_Y_OFFSET = 4
+    DEFAULT_TASK_WIDTH = 32
+    TASK_Y_OFFSET = 4
+
 
 # Project view
 class View:
     def __init__(self, project):
         self.project = project
-        self.view = DAY
+        self.view = Constants.DAY
         self.columnWidth = 7
         self.selectingDeps = False
         self.unsavedEdits = True
@@ -92,7 +94,7 @@ class View:
         self.updateSize()
 
         # Defaults
-        self.taskWidth = DEFAULT_TASK_WIDTH
+        self.taskWidth = Constants.DEFAULT_TASK_WIDTH
 
     @property
     def firstDate(self):
@@ -109,22 +111,22 @@ class View:
         self.width = int(columns)
 
     def toggleView(self):
-        self.view = DAY if self.view == WEEK else WEEK
+        self.view = Constants.DAY if self.view == Constants.WEEK else Constants.WEEK
 
     def panLeft(self):
-        self.firstDateOffset -= 1 if self.view == DAY else 7
+        self.firstDateOffset -= 1 if self.view == Constants.DAY else 7
         if self.firstDateOffset < 0:
             self.firstDateOffset = 0
 
     def panRight(self):
-        self.firstDateOffset += 1 if self.view == DAY else 7
+        self.firstDateOffset += 1 if self.view == Constants.DAY else 7
 
     def panUp(self):
         if self.firstTask > 0:
             self.firstTask -= 1
 
     def panDown(self):
-        if self.firstTask < len(self.project.tasks) - ((self.height - TASK_Y_OFFSET + 1) // 2):
+        if self.firstTask < len(self.project.tasks) - ((self.height - Constants.TASK_Y_OFFSET + 1) // 2):
             self.firstTask += 1
 
     def selectUp(self):
@@ -252,32 +254,32 @@ def reset():
     write("\x1b[39;49m")
 
 
-def getTaskColour(view, task):
+def getTaskColor(view, task):
     if view.selectingDeps:
         if task is view.depsFor:
-            return DEPS_OF_COLOUR
+            return Constants.DEPS_OF_COLOR
         if task in view.depsFor.deps:
-            return DIRECT_DEPENDENCY_COLOUR
+            return Constants.DIRECT_DEPENDENCY_COLOR
         if task in view.depsFor.dependents:
-            return DIRECT_DEPENDENT_COLOUR
+            return Constants.DIRECT_DEPENDENT_COLOR
         if view.depsFor.hasDep(task):
-            return DEPENDENCY_COLOUR
+            return Constants.DEPENDENCY_COLOR
         if view.depsFor.hasDependent(task):
-            return DEPENDENT_COLOUR
-        return DEFAULT_COLOUR
-    if task.status == DONE:
-        return DONE_COLOUR
-    if task.status == ONGOING:
-        return ONGOING_COLOUR
-    if task.status == CRITICAL:
-        return CRITICAL_COLOUR
-    return DEFAULT_COLOUR
+            return Constants.DEPENDENT_COLOR
+        return Constants.DEFAULT_COLOR
+    if task.status == Status.DONE:
+        return Constants.DONE_COLOR
+    if task.status == Status.ONGOING:
+        return Constants.ONGOING_COLOR
+    if task.status == Status.CRITICAL:
+        return Constants.CRITICAL_COLOR
+    return Constants.DEFAULT_COLOR
 
 
 # UI
 def drawDate(view, date, isLast=False):
     day = "       "
-    if view.view == DAY:
+    if view.view == Constants.DAY:
         day = date.strftime("%a")
         if not len(day) % 2:
             day += " "
@@ -292,11 +294,11 @@ def drawDate(view, date, isLast=False):
 
 def drawGrid(view):
     date = view.firstDate
-    delta = datetime.timedelta(days=1 if view.view == DAY else 7)
-    setFg(GRID_FG)
+    delta = datetime.timedelta(days=1 if view.view == Constants.DAY else 7)
+    setFg(Constants.GRID_FG)
     for y in range(view.height):
         goto(view.taskWidth, y)
-        current = GRID_COLOUR_A
+        current = Constants.GRID_COLOR_A
         setBg(current)
         columnCount = (view.width - view.taskWidth) // view.columnWidth
         for i in range(columnCount):
@@ -305,18 +307,18 @@ def drawGrid(view):
                 date += delta
             elif y != 2:
                 write(" " * view.columnWidth)
-            current = GRID_COLOUR_B if current == GRID_COLOUR_A else GRID_COLOUR_A
+            current = Constants.GRID_COLOR_B if current == Constants.GRID_COLOR_A else Constants.GRID_COLOR_A
             setBg(current)
 
     # Draw today
-    unitBlock = 7 if view.view == DAY else 1
+    unitBlock = 7 if view.view == Constants.DAY else 1
     today = datetime.datetime.now()
     offset = today - datetime.datetime.combine(view.firstDate, datetime.datetime.min.time())
     now = offset.days * unitBlock + (offset.seconds * unitBlock) // (60 * 60 * 24)
     if offset.days >= 0 and now <= view.width - view.taskWidth:
-        goto(view.taskWidth + now, TASK_Y_OFFSET)
-        setBg(TODAY_COLOUR)
-        for i in range(view.height - TASK_Y_OFFSET):
+        goto(view.taskWidth + now, Constants.TASK_Y_OFFSET)
+        setBg(Constants.TODAY_COLOR)
+        for i in range(view.height - Constants.TASK_Y_OFFSET):
             write(" ")
             godown(1)
             goleft(1)
@@ -326,7 +328,7 @@ def drawGrid(view):
 
 def drawTask(view, i):
     task = view.project.tasks[i + view.firstTask]  #
-    y = i * 2 + TASK_Y_OFFSET  #
+    y = i * 2 + Constants.TASK_Y_OFFSET  #
     if y >= view.height:
         return
 
@@ -341,17 +343,17 @@ def drawTask(view, i):
     else:
         taskText += " " * (view.taskWidth - len(task.title) - 1)
     if i + view.firstTask == view.currentTask:  #
-        setBg(CURRENT_TASK_BG_COLOUR)
-        setFg(CURRENT_TASK_FG_COLOUR)
+        setBg(Constants.CURRENT_TASK_BG_COLOR)
+        setFg(Constants.CURRENT_TASK_FG_COLOR)
         taskText += " " * width
 
     write(taskText)
 
     # Draw block
-    setFg(colour.black)
-    setBg(getTaskColour(view, task))
+    setFg(Color.black)
+    setBg(getTaskColor(view, task))
 
-    blockUnit = 7 if view.view == DAY else 1
+    blockUnit = 7 if view.view == Constants.DAY else 1
     block = " " * task.length * blockUnit + "▒" * task.extra * blockUnit
     start = task.start * blockUnit - view.firstDateOffset * blockUnit
     if start < 0:
@@ -374,8 +376,8 @@ def drawTasks(view):
 
 def drawInfo(view, msg=""):
     goto(0, 0)
-    setBg(INFO_BG_COLOUR)
-    setFg(INFO_FG_COLOUR)
+    setBg(Constants.INFO_BG_COLOR)
+    setFg(Constants.INFO_FG_COLOR)
     if msg:
         write(f" {msg} ")
     elif view.selectingDeps:
@@ -385,8 +387,8 @@ def drawInfo(view, msg=""):
 
 def getInputText(view, msg, fd, oldSettings):
     goto(0, 0)
-    setBg(PROMPT_BG_COLOUR)
-    setFg(PROMPT_FG_COLOUR)
+    setBg(Constants.PROMPT_BG_COLOR)
+    setFg(Constants.PROMPT_FG_COLOR)
     write(" " * view.width)
     goto(1, 0)
     write(f"{msg}\x1b[?25h")

@@ -1,10 +1,11 @@
 import datetime
 
-DONE = 0
-ONGOING = 1
-WAITING = 2
-CRITICAL = 3
-# REMOVED = 4
+
+class Status:
+    DONE = 0
+    ONGOING = 1
+    WAITING = 2
+    CRITICAL = 3
 
 
 class Project:
@@ -46,16 +47,16 @@ class Task:
     @property
     def status(self):
         if self.isDone:
-            return DONE
+            return Status.DONE
         for dep in self.deps:
             if not dep.isDone:
-                return WAITING
+                return Status.WAITING
         if self.end == self.project.end:
-            return CRITICAL
+            return Status.CRITICAL
         for dependent in self.dependents:
             if not dependent.extra:
-                return CRITICAL
-        return ONGOING
+                return Status.CRITICAL
+        return Status.ONGOING
 
     @property
     def extra(self):

@@ -7,9 +7,33 @@ import termios
 import traceback
 import tty
 
-from gantt import *
-from keys import *
-from ui import *
+from gantt import Project, Status, Task
+from keys import Keybindings
+from ui import (
+    Color,
+    Constants,
+    View,
+    clear,
+    drawDate,
+    drawGrid,
+    drawInfo,
+    drawTask,
+    drawTasks,
+    getBg,
+    getEditorInput,
+    getFg,
+    getInputText,
+    getTaskColor,
+    godown,
+    goleft,
+    goright,
+    goto,
+    goup,
+    reset,
+    setBg,
+    setFg,
+    write,
+)
 
 
 def draw(view):
@@ -35,63 +59,63 @@ def process(view, char, _fd, _oldSettings, _FILE_NAME):
     if len(view.project.tasks):
 
         # Needs at least 1 task
-        if char == SELECT_UP:
+        if char == Keybindings.SELECT_UP:
             view.selectUp()
-        elif char == SELECT_DOWN:
+        elif char == Keybindings.SELECT_DOWN:
             view.selectDown()
 
-        elif char == GROW_TASK:
+        elif char == Keybindings.GROW_TASK:
             view.growCurrent()
-        elif char == SHRINK_TASK:
+        elif char == Keybindings.SHRINK_TASK:
             view.shrinkCurrent()
 
-        elif char == TOGGLE_DONE_OR_DEP:
+        elif char == Keybindings.TOGGLE_DONE_OR_DEP:
             if view.selectingDeps:
                 view.toggleDep()
             else:
                 view.toggleDoneCurrent()
 
-        elif char == TOGGLE_SELECT_DEPS:
+        elif char == Keybindings.TOGGLE_SELECT_DEPS:
             view.selectDeps()
 
-        elif char == RENAME_TASK:
+        elif char == Keybindings.RENAME_TASK:
             view.renameCurrent(_fd, _oldSettings)
-        elif char == DELETE_TASK:
+        elif char == Keybindings.DELETE_TASK:
             view.deleteCurrent(_fd, _oldSettings)
-        elif char == EDIT_TASK:
+        elif char == Keybindings.EDIT_TASK:
             view.editCurrent()
 
     # Can be done with no tasks
-    if char == DAY_WEEK_TOGGLE:
+    if char == Keybindings.DAY_WEEK_TOGGLE:
         view.toggleView()
 
-    elif char == PAN_RIGHT:
+    elif char == Keybindings.PAN_RIGHT:
         view.panRight()
-    elif char == PAN_LEFT:
+    elif char == Keybindings.PAN_LEFT:
         view.panLeft()
-    elif char == PAN_UP:
+    elif char == Keybindings.PAN_UP:
         view.panUp()
-    elif char == PAN_DOWN:
+    elif char == Keybindings.PAN_DOWN:
         view.panDown()
 
-    elif char == PAN_TOP:
+    elif char == Keybindings.PAN_TOP:
         view.firstTask = 0
-    elif char == PAN_BOTTOM:
+    elif char == Keybindings.PAN_BOTTOM:
         view.firstTask = len(view.project.tasks) - ((view.height - 2) // 2)
         if view.firstTask < 0:
             view.firstTask = 0
-    elif char == PAN_START:
+    elif char == Keybindings.PAN_START:
         view.firstDateOffset = 0
 
-    elif char == GROW_TASK_TITLE:
+    elif char == Keybindings.GROW_TASK_TITLE:
         view.growTaskTitle()
-    elif char == SHRINK_TASK_TITLE:
+    elif char == Keybindings.SHRINK_TASK_TITLE:
         view.shrinkTaskTitle()
 
-    elif char == ADD_TASK:
+    elif char == Keybindings.ADD_TASK:
         view.addTask(_fd, _oldSettings)
 
-    elif char == WRITE_TO_FILE:
+    elif char == Keybindings.WRITE_TO_FILE:
         with open(_FILE_NAME, "wb") as ganttFile:
             pickle.dump(view, ganttFile)
         view.unsavedEdits = False
@@ -110,7 +134,7 @@ def onResize(view):
     view.updateSize()
 
     # Fix scrolling
-    view.firstTask = min(view.firstTask, len(view.project.tasks) - ((view.height - TASK_Y_OFFSET + 1) // 2))
+    view.firstTask = min(view.firstTask, len(view.project.tasks) - ((view.height - Constants.TASK_Y_OFFSET + 1) // 2))
     if view.firstTask < 0:
         view.firstTask = 0
 
@@ -161,7 +185,7 @@ def main():
         # Read input
         while True:
             char = sys.stdin.read(1)
-            if char == QUIT:
+            if char == Keybindings.QUIT:
                 if view.unsavedEdits:
                     confirm = getInputText(
                         view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, oldSettings
