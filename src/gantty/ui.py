@@ -6,6 +6,7 @@ import tempfile
 import termios
 import tty
 
+from gantty.keys import Keybindings
 from gantty.gantt import Project, Status, Task
 
 
@@ -409,6 +410,111 @@ def getEditorInput(initialMsg):
         write("\x1b[?25l")
         tf.seek(0)
         return tf.read()
+
+
+def draw(view):
+
+    # Clear
+    clear()
+
+    # Draw the grid
+    drawGrid(view)
+
+    drawTasks(view)
+
+    drawInfo(view)
+
+    # Flush
+    sys.stdout.flush()
+              
+
+def process(view, char, _fd, _oldSettings, _FILE_NAME):
+
+    redraw = True
+
+    if len(view.project.tasks):
+
+        # Needs at least 1 task
+        if char == Keybindings.SELECT_UP:
+            view.selectUp()
+        elif char == Keybindings.SELECT_DOWN:
+            view.selectDown()
+
+        elif char == Keybindings.GROW_TASK:
+            view.growCurrent()
+        elif char == Keybindings.SHRINK_TASK:
+            view.shrinkCurrent()
+
+        elif char == Keybindings.TOGGLE_DONE_OR_DEP:
+            if view.selectingDeps:
+                view.toggleDep()
+            else:
+                view.toggleDoneCurrent()
+
+        elif char == Keybindings.TOGGLE_SELECT_DEPS:
+            view.selectDeps()
+
+        elif char == Keybindings.RENAME_TASK:
+            view.renameCurrent(_fd, _oldSettings)
+        elif char == Keybindings.DELETE_TASK:
+            view.deleteCurrent(_fd, _oldSettings)
+        elif char == Keybindings.EDIT_TASK:
+            view.editCurrent()
+
+    # Can be done with no tasks
+    if char == Keybindings.DAY_WEEK_TOGGLE:
+        view.toggleView()
+
+    elif char == Keybindings.PAN_RIGHT:
+        view.panRight()
+    elif char == Keybindings.PAN_LEFT:
+        view.panLeft()
+    elif char == Keybindings.PAN_UP:
+        view.panUp()
+    elif char == Keybindings.PAN_DOWN:
+        view.panDown()
+
+    elif char == Keybindings.PAN_TOP:
+        view.firstTask = 0
+    elif char == Keybindings.PAN_BOTTOM:
+        view.firstTask = len(view.project.tasks) - ((view.height - 2) // 2)
+        if view.firstTask < 0:
+            view.firstTask = 0
+    elif char == Keybindings.PAN_START:
+        view.firstDateOffset = 0
+
+    elif char == Keybindings.GROW_TASK_TITLE:
+        view.growTaskTitle()
+    elif char == Keybindings.SHRINK_TASK_TITLE:
+        view.shrinkTaskTitle()
+
+    elif char == Keybindings.ADD_TASK:
+        view.addTask(_fd, _oldSettings)
+
+    elif char == Keybindings.WRITE_TO_FILE:
+        with open(_FILE_NAME, "wb") as ganttFile:
+            pickle.dump(view, ganttFile)
+        view.unsavedEdits = False
+        drawInfo(view, "Project saved!")
+        sys.stdout.flush()
+        redraw = False
+
+    else:
+        pass
+
+    if redraw:
+        draw(view)
+
+
+def onResize(view):
+    view.updateSize()
+
+    # Fix scrolling
+    view.firstTask = min(view.firstTask, len(view.project.tasks) - ((view.height - Constants.TASK_Y_OFFSET + 1) // 2))
+    if view.firstTask < 0:
+        view.firstTask = 0
+
+    draw(view)
 
 
 # ╭╮╰╯─│→├▐█▌┤
