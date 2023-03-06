@@ -12,17 +12,17 @@ class Project:
     def __init__(self, name):
         self.name = name
         self.tasks = []
-        self.startDate = datetime.date.today()
+        self.start_date = datetime.date.today()
 
-    def addTask(self, title, length=1, earliestStart=0, isDone=False):
-        self.tasks.append(Task(title, self, length, earliestStart, isDone))
+    def add_task(self, title, length=1, earliest_start=0, is_done=False):
+        self.tasks.append(Task(title, self, length, earliest_start, is_done))
 
-    def removeTask(self, toDelete):
+    def remove_task(self, to_delete):
         for i in range(len(self.tasks)):
-            if self.tasks[i] is toDelete:
-                for dependent in toDelete.dependents:
-                    dependent.removeDep(dependent)
-                    dependent.deps += toDelete.deps
+            if self.tasks[i] is to_delete:
+                for dependent in to_delete.dependents:
+                    dependent.remove_dep(dependent)
+                    dependent.deps += to_delete.deps
                 del self.tasks[i]
                 return
 
@@ -32,13 +32,13 @@ class Project:
 
 
 class Task:
-    def __init__(self, title, project, length=1, earliestStart=0, isDone=False):
+    def __init__(self, title, project, length=1, earliest_start=0, is_done=False):
 
         # Basic attributes
         self.title = title
-        self.isDone = isDone
+        self.is_done = is_done
         self.length = length
-        self.earliestStart = earliestStart
+        self.earliest_start = earliest_start
         self.description = ""
 
         self.deps = []
@@ -46,10 +46,10 @@ class Task:
 
     @property
     def status(self):
-        if self.isDone:
+        if self.is_done:
             return Status.DONE
         for dep in self.deps:
-            if not dep.isDone:
+            if not dep.is_done:
                 return Status.WAITING
         if self.end == self.project.end:
             return Status.CRITICAL
@@ -70,7 +70,7 @@ class Task:
         return extra
 
     @property
-    def totalLength(self):
+    def total_length(self):
         return self.length + self.extra
 
     @property
@@ -79,7 +79,7 @@ class Task:
 
     @property
     def start(self):
-        start = self.earliestStart
+        start = self.earliest_start
         for dep in self.deps:
             if start < dep.end:
                 start = dep.end
@@ -89,48 +89,48 @@ class Task:
     def dependents(self):
         return [task for task in self.project.tasks if self in task.deps]
 
-    def hasDependent(self, task):
+    def has_dependent(self, task):
         for dependent in self.dependents:
-            if dependent == task or dependent.hasDependent(task):
+            if dependent == task or dependent.has_dependent(task):
                 return True
         return False
 
-    def hasDep(self, task):
+    def has_dep(self, task):
         for dep in self.deps:
-            if dep == task or dep.hasDep(task):
+            if dep == task or dep.has_dep(task):
                 return True
         return False
 
-    def setDep(self, newDep):
-        if newDep == self or newDep.hasDep(self) or self.hasDep(newDep):
+    def set_dep(self, new_dep):
+        if new_dep == self or new_dep.has_dep(self) or self.has_dep(new_dep):
             return False
-        for dep in newDep.deps:
-            if self.hasDep(dep):
-                self.removeDep(dep)
+        for dep in new_dep.deps:
+            if self.has_dep(dep):
+                self.remove_dep(dep)
         for dependent in self.dependents:
-            if dependent.hasDep(newDep):
-                dependent.removeDep(newDep)
-        self.deps.append(newDep)
-        if self.isDone:
-            newDep.setDone()
+            if dependent.has_dep(new_dep):
+                dependent.remove_dep(new_dep)
+        self.deps.append(new_dep)
+        if self.is_done:
+            new_dep.set_done()
         return True
 
-    def removeDep(self, oldDep):
-        if oldDep in self.deps:
-            del self.deps[self.deps.index(oldDep)]
+    def remove_dep(self, old_dep):
+        if old_dep in self.deps:
+            del self.deps[self.deps.index(old_dep)]
 
-    def toggleDep(self, toggle):
-        if self.hasDep(toggle):
-            self.removeDep(toggle)
+    def toggle_dep(self, toggle):
+        if self.has_dep(toggle):
+            self.remove_dep(toggle)
         else:
-            self.setDep(toggle)
+            self.set_dep(toggle)
 
-    def setDone(self):
-        self.isDone = True
+    def set_done(self):
+        self.is_done = True
         for dep in self.deps:
-            dep.setDone()
+            dep.set_done()
 
-    def setNotDone(self):
-        self.isDone = False
+    def set_not_done(self):
+        self.is_done = False
         for dependent in self.dependents:
-            dependent.isDone = False
+            dependent.is_done = False

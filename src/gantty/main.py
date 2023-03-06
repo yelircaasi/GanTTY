@@ -10,13 +10,28 @@ from gantty.keys import Keybindings
 from gantty.ui import (
     View,
     clear,
-    getInputText,
+    draw,
+    get_input_text,
+    on_resize,
+    process,
     reset,
     write,
-    draw,
-    process,
-    onResize
 )
+
+
+def create_view(file_name):
+    try:
+        with open(file_name, "rb") as gantt_file:
+            view = pickle.load(gantt_file)
+            print(view)
+        if not isinstance(view, View):
+            raise TypeError("Could not read file correctly!")
+        view.unsaved_edits = False
+    except (FileNotFoundError, EOFError):
+        view = View(Project("New Project"))
+    except pickle.UnpicklingError:
+        raise IOError("Could not read file correctly!")
+    return view
 
 
 def main():
@@ -29,52 +44,39 @@ def main():
 
     # Setup raw mode
     fd = sys.stdin.fileno()
-    oldSettings = termios.tcgetattr(fd)
+    old_settings = termios.tcgetattr(fd)
     tty.setraw(sys.stdin)
 
-    endMsg = ""
-    endClear = False
+    end_msg = ""
+    end_clear = False
 
     try:
 
-        try:
-            with open(FILE_NAME, "rb") as ganttFile:
-                view = pickle.load(ganttFile)
-                print(view)
-            if not isinstance(view, View):
-                endMsg = "Could not read file correctly!"
-                raise
-            view.unsavedEdits = False
-        except (FileNotFoundError, EOFError):
-            # proj_name = input("Please enter project name: ")
-            view = View(Project("New Project"))
-        except pickle.UnpicklingError:
-            endMsg = "Could not read file correctly!"
-            raise
+        view = create_view(FILE_NAME)
 
         # Redraw on resize
-        signal.signal(signal.SIGWINCH, lambda signum, frame: onResize(view))
+        signal.signal(signal.SIGWINCH, lambda signum, frame: on_resize(view))
 
         # Hide the cursor
         write("\x1b[?25l")
 
         # Draw the screen
-        endClear = True
+        end_clear = True
         draw(view)
 
         # Read input
         while True:
             char = sys.stdin.read(1)
             if char == Keybindings.QUIT:
-                if view.unsavedEdits:
-                    confirm = getInputText(
-                        view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, oldSettings
+                if view.unsaved_edits:
+                    confirm = get_input_text(
+                        view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, old_settings
                     )
                     if confirm.lower() == "yes":
                         break
                 else:
                     break
-            process(view, char, fd, oldSettings, FILE_NAME)
+            process(view, char, fd, old_settings, FILE_NAME)
 
     # Avoid breaking the terminal after a crash
     except Exception:
@@ -84,12 +86,12 @@ def main():
 
     # Restore terminal settings
     reset()
-    if endClear:
+    if end_clear:
         clear()
     write("\x1b[?25h\n\r")
-    termios.tcsetattr(fd, termios.TCSADRAIN, oldSettings)
-    if endMsg:
-        print(endMsg)
+    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    if end_msg:
+        print(end_msg)
     else:
         print(tb)
 
