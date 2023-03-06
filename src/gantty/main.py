@@ -28,7 +28,7 @@ def draw(view):
     sys.stdout.flush()
 
 
-def process(view, char):
+def process(view, char, _fd, _oldSettings, _FILE_NAME):
 
     redraw = True
 
@@ -55,9 +55,9 @@ def process(view, char):
             view.selectDeps()
 
         elif char == RENAME_TASK:
-            view.renameCurrent(fd, oldSettings)
+            view.renameCurrent(_fd, _oldSettings)
         elif char == DELETE_TASK:
-            view.deleteCurrent(fd, oldSettings)
+            view.deleteCurrent(_fd, _oldSettings)
         elif char == EDIT_TASK:
             view.editCurrent()
 
@@ -89,10 +89,10 @@ def process(view, char):
         view.shrinkTaskTitle()
 
     elif char == ADD_TASK:
-        view.addTask(fd, oldSettings)
+        view.addTask(_fd, _oldSettings)
 
     elif char == WRITE_TO_FILE:
-        with open(FILE_NAME, "wb") as ganttFile:
+        with open(_FILE_NAME, "wb") as ganttFile:
             pickle.dump(view, ganttFile)
         view.unsavedEdits = False
         drawInfo(view, "Project saved!")
@@ -117,73 +117,78 @@ def onResize(view):
     draw(view)
 
 
-# Get file name
-if len(sys.argv) < 2:
-    print("USAGE: gantt <filename>")
-    exit()
+def main():
+    # Get file name
+    if len(sys.argv) < 2:
+        print("USAGE: gantt <filename>")
+        exit()
 
-FILE_NAME = sys.argv[1]
+    FILE_NAME = sys.argv[1]
 
-# Setup raw mode
-fd = sys.stdin.fileno()
-oldSettings = termios.tcgetattr(fd)
-tty.setraw(sys.stdin)
+    # Setup raw mode
+    fd = sys.stdin.fileno()
+    oldSettings = termios.tcgetattr(fd)
+    tty.setraw(sys.stdin)
 
-endMsg = ""
-endClear = False
-
-try:
+    endMsg = ""
+    endClear = False
 
     try:
-        with open(FILE_NAME, "rb") as ganttFile:
-            view = pickle.load(ganttFile)
-        if type(view) is not View:
+
+        try:
+            with open(FILE_NAME, "rb") as ganttFile:
+                view = pickle.load(ganttFile)
+            if type(view) is not View:
+                endMsg = "Could not read file correctly!"
+                raise
+            view.unsavedEdits = False
+        except (FileNotFoundError, EOFError):
+            view = View(Project("Untitled"))
+        except pickle.UnpicklingError:
             endMsg = "Could not read file correctly!"
             raise
-        view.unsavedEdits = False
-    except (FileNotFoundError, EOFError):
-        view = View(Project("Untitled"))
-    except pickle.UnpicklingError:
-        endMsg = "Could not read file correctly!"
-        raise
 
-    # Redraw on resize
-    signal.signal(signal.SIGWINCH, lambda signum, frame: onResize(view))
+        # Redraw on resize
+        signal.signal(signal.SIGWINCH, lambda signum, frame: onResize(view))
 
-    # Hide the cursor
-    write("\x1b[?25l")
+        # Hide the cursor
+        write("\x1b[?25l")
 
-    # Draw the screen
-    endClear = True
-    draw(view)
+        # Draw the screen
+        endClear = True
+        draw(view)
 
-    # Read input
-    while True:
-        char = sys.stdin.read(1)
-        if char == QUIT:
-            if view.unsavedEdits:
-                confirm = getInputText(
-                    view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, oldSettings
-                )
-                if confirm.lower() == "yes":
+        # Read input
+        while True:
+            char = sys.stdin.read(1)
+            if char == QUIT:
+                if view.unsavedEdits:
+                    confirm = getInputText(
+                        view, "About to quit with unsaved edits! Are you sure you want to continue? ", fd, oldSettings
+                    )
+                    if confirm.lower() == "yes":
+                        break
+                else:
                     break
-            else:
-                break
-        process(view, char)
+            process(view, char, fd, oldSettings, FILE_NAME)
 
-# Avoid breaking the terminal after a crash
-except Exception:
-    tb = traceback.format_exc()
-else:
-    tb = ""
+    # Avoid breaking the terminal after a crash
+    except Exception:
+        tb = traceback.format_exc()
+    else:
+        tb = ""
 
-# Restore terminal settings
-reset()
-if endClear:
-    clear()
-write("\x1b[?25h\n\r")
-termios.tcsetattr(fd, termios.TCSADRAIN, oldSettings)
-if endMsg:
-    print(endMsg)
-else:
-    print(tb)
+    # Restore terminal settings
+    reset()
+    if endClear:
+        clear()
+    write("\x1b[?25h\n\r")
+    termios.tcsetattr(fd, termios.TCSADRAIN, oldSettings)
+    if endMsg:
+        print(endMsg)
+    else:
+        print(tb)
+
+
+if __name__ == "__main__":
+    main()
