@@ -98,21 +98,12 @@ def restore_terminal(info_obj):
 def main():
 
     runtime_info = RuntimeInfo(file_name=get_file_name())
-    # FILE_NAME = get_file_name()
-
-    # Setup raw mode
-    # file_descriptor = sys.stdin.fileno()
-    # old_settings = termios.tcgetattr(file_descriptor)
     tty.setraw(sys.stdin)
 
     try:
         runtime_info = main_loop(runtime_info)
-
     except Exception:
-        # Avoid breaking the terminal after a crash
         runtime_info.exception_traceback = traceback.format_exc()
-    # else:
-    #     tb = ""
 
     restore_terminal(runtime_info)
 
